@@ -17,7 +17,7 @@ COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 # Explicitly copy only what the production environment needs
-COPY bin/ /app/bin/
+COPY bridge.php channel-server.php websocket-server.php /app/bin/
 COPY config/ /app/config/
 COPY start-websockets.sh /app/
 
