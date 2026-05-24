@@ -1,0 +1,6 @@
+.git
+.idea
+vendor/
+workerman.log
+run-sockets.bat
+console
