@@ -1,0 +1,10 @@
+2026-05-10 03:21:21 pid:1 TypeError: Firebase\JWT\JWT::decode(): Argument #1 ($jwt) must be of type string, null given, called in C:\College_\Projects\Toothalie_Project\backend\bin\websocket-server.php on line 44 and defined in C:\College_\Projects\Toothalie_Project\backend\vendor\firebase\php-jwt\src\JWT.php:98
+Stack trace:
+#0 C:\College_\Projects\Toothalie_Project\backend\bin\websocket-server.php(44): Firebase\JWT\JWT::decode()
+#1 C:\College_\Projects\Toothalie_Project\backend\vendor\workerman\workerman\src\Connection\TcpConnection.php(805): {closure:C:\College_\Projects\Toothalie_Project\backend\bin\websocket-server.php:38}()
+#2 C:\College_\Projects\Toothalie_Project\backend\vendor\workerman\workerman\src\Events\Select.php(406): Workerman\Connection\TcpConnection->baseRead()
+#3 C:\College_\Projects\Toothalie_Project\backend\vendor\workerman\workerman\src\Worker.php(1620): Workerman\Events\Select->run()
+#4 C:\College_\Projects\Toothalie_Project\backend\vendor\workerman\workerman\src\Worker.php(1536): Workerman\Worker::forkWorkersForWindows()
+#5 C:\College_\Projects\Toothalie_Project\backend\vendor\workerman\workerman\src\Worker.php(603): Workerman\Worker::forkWorkers()
+#6 C:\College_\Projects\Toothalie_Project\backend\bin\websocket-server.php(72): Workerman\Worker::runAll()
+#7 {main}
