@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-COPY composer.json composer.lock ./
+# COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
 # Explicitly copy only what the production environment needs
