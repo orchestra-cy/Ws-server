@@ -3,8 +3,10 @@ require_once dirname(__DIR__) . "/vendor/autoload.php";
 use Workerman\Worker;
 use Channel\Server;
 
-$channelHost = getenv("CHANNEL_HOST") ?: "127.0.0.1";
+$channelListenHost = getenv("CHANNEL_LISTEN_HOST") ?: "0.0.0.0";
 $channelPort = (int) (getenv("CHANNEL_PORT") ?: 2206);
 
-$channel_server = new Server($channelHost, $channelPort);
+echo "[Channel Server] Listening on frame://{$channelListenHost}:{$channelPort}\n";
+
+$channel_server = new Server($channelListenHost, $channelPort);
 Worker::runAll();

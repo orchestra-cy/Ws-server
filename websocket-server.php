@@ -33,6 +33,7 @@ $channelPort = (int) (getenv("CHANNEL_PORT") ?: 2206);
 echo "[WebSocket Server] Starting on ws://0.0.0.0:8086\n";
 echo "[WebSocket Server] JWT validation enabled with RS256\n";
 echo "[WebSocket Server] JWT public key loaded (sha256: {$fingerprint})\n";
+echo "[WebSocket Server] Channel target {$channelHost}:{$channelPort}\n";
 
 $ws_worker->onWorkerStart = function () use (
     &$ws_worker,
@@ -46,6 +47,17 @@ $ws_worker->onWorkerStart = function () use (
     // Listen for notifications coming from Symfony via the Bridge
     Client::on("send_notification", function ($data) use (&$ws_worker) {
         $userId = $data["userId"] ?? null;
+        $payloadSummary = "missing";
+        if (array_key_exists("payload", $data)) {
+            $payloadSummary = is_array($data["payload"])
+                ? "keys=" . implode(",", array_keys($data["payload"]))
+                : gettype($data["payload"]);
+        }
+        echo "[WebSocket Server] Channel event send_notification received (userId=" .
+            ($userId ?? "null") .
+            ", payload=" .
+            $payloadSummary .
+            ")\n";
 
         if (!$userId) {
             echo "[WebSocket Server] ⚠ Notification received with no userId\n";
