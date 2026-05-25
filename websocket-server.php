@@ -30,6 +30,34 @@ $fingerprint = substr(hash("sha256", $publicKey), 0, 12);
 $channelHost = getenv("CHANNEL_HOST") ?: "127.0.0.1";
 $channelPort = (int) (getenv("CHANNEL_PORT") ?: 2206);
 
+function summarizeMessageForLog(array $message): string
+{
+    $logMessage = $message;
+    if (isset($logMessage["token"]) && is_string($logMessage["token"])) {
+        $token = $logMessage["token"];
+        $len = strlen($token);
+        $logMessage["token"] =
+            $len <= 12
+                ? str_repeat("*", $len)
+                : substr($token, 0, 6) . "…" . substr($token, -6);
+    }
+    if (array_key_exists("payload", $logMessage)) {
+        $payload = $logMessage["payload"];
+        $logMessage["payload"] = is_array($payload)
+            ? "keys=" . implode(",", array_keys($payload))
+            : gettype($payload);
+    }
+    return json_encode($logMessage, JSON_UNESCAPED_SLASHES);
+}
+
+function sendJsonWithLog($connection, array $message, string $context): void
+{
+    $summary = summarizeMessageForLog($message);
+    $connectionId = $connection->connectionId ?? "unknown";
+    echo "[WebSocket Server] → {$context} to {$connectionId}: {$summary}\n";
+    $connection->send(json_encode($message, JSON_UNESCAPED_SLASHES));
+}
+
 echo "[WebSocket Server] Starting on ws://0.0.0.0:8086\n";
 echo "[WebSocket Server] JWT validation enabled with RS256\n";
 echo "[WebSocket Server] JWT public key loaded (sha256: {$fingerprint})\n";
@@ -42,6 +70,12 @@ $ws_worker->onWorkerStart = function () use (
 ) {
     echo "[WebSocket Server] Worker started, connecting to Channel Server...\n";
 
+    Client::$onConnect = function () use ($channelHost, $channelPort) {
+        echo "[WebSocket Server] Channel connected to {$channelHost}:{$channelPort}\n";
+    };
+    Client::$onClose = function () use ($channelHost, $channelPort) {
+        echo "[WebSocket Server] Channel connection closed ({$channelHost}:{$channelPort}) - retrying\n";
+    };
     Client::connect($channelHost, $channelPort);
 
     // Listen for notifications coming from Symfony via the Bridge
@@ -81,11 +115,13 @@ $ws_worker->onWorkerStart = function () use (
                     $connection->getStatus() ===
                         \Workerman\Connection\TcpConnection::STATUS_ESTABLISHED
                 ) {
-                    $connection->send(
-                        json_encode([
+                    sendJsonWithLog(
+                        $connection,
+                        [
                             "type" => "notification",
                             "payload" => $data["payload"],
-                        ]),
+                        ],
+                        "notification",
                     );
                     $sentCount++;
                 }
@@ -149,11 +185,13 @@ $ws_worker->onMessage = function ($connection, $data) use (
 
             if (!$token) {
                 echo "[WebSocket Server] ⚠ Auth attempt without token from {$connection->connectionId}\n";
-                $connection->send(
-                    json_encode([
+                sendJsonWithLog(
+                    $connection,
+                    [
                         "type" => "auth_error",
                         "message" => "Token required",
-                    ]),
+                    ],
+                    "auth_error",
                 );
                 return;
             }
@@ -202,40 +240,48 @@ $ws_worker->onMessage = function ($connection, $data) use (
                     : 1;
                 echo "[WebSocket Server] ✓ AUTH SUCCESS: User {$userId} (connection: {$connection->connectionId}) - Total connections: {$connCount}\n";
 
-                $connection->send(
-                    json_encode([
+                sendJsonWithLog(
+                    $connection,
+                    [
                         "type" => "auth_success",
                         "userId" => $userId,
                         "message" => "Authenticated",
-                    ]),
+                    ],
+                    "auth_success",
                 );
             } catch (ExpiredException $e) {
                 echo "[WebSocket Server] 🔴 SECURITY: Expired token from {$connection->connectionId}\n";
-                $connection->send(
-                    json_encode([
+                sendJsonWithLog(
+                    $connection,
+                    [
                         "type" => "auth_error",
                         "message" => "Token expired",
-                    ]),
+                    ],
+                    "auth_error",
                 );
                 $connection->close();
             } catch (SignatureInvalidException $e) {
                 echo "[WebSocket Server] 🔴 SECURITY: Invalid signature from {$connection->connectionId}\n";
-                $connection->send(
-                    json_encode([
+                sendJsonWithLog(
+                    $connection,
+                    [
                         "type" => "auth_error",
                         "message" => "Invalid token signature",
-                    ]),
+                    ],
+                    "auth_error",
                 );
                 $connection->close();
             } catch (\Exception $e) {
                 echo "[WebSocket Server] 🔴 SECURITY: JWT validation failed from {$connection->connectionId}: " .
                     $e->getMessage() .
                     "\n";
-                $connection->send(
-                    json_encode([
+                sendJsonWithLog(
+                    $connection,
+                    [
                         "type" => "auth_error",
                         "message" => "Authentication failed",
-                    ]),
+                    ],
+                    "auth_error",
                 );
                 $connection->close();
             }
@@ -248,11 +294,13 @@ $ws_worker->onMessage = function ($connection, $data) use (
                 return;
             }
 
-            $connection->send(
-                json_encode([
+            sendJsonWithLog(
+                $connection,
+                [
                     "type" => "pong",
                     "timestamp" => time(),
-                ]),
+                ],
+                "pong",
             );
         }
 
