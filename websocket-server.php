@@ -100,7 +100,27 @@ $ws_worker->onMessage = function ($connection, $data) use (
     $algorithm,
 ) {
     try {
+        echo "[WebSocket Server] ← Raw message from {$connection->connectionId}: {$data}\n";
+
         $payload = json_decode($data, true);
+
+        if (is_array($payload)) {
+            $logPayload = $payload;
+            if (isset($logPayload["token"])) {
+                $token = $logPayload["token"];
+                if (is_string($token)) {
+                    $len = strlen($token);
+                    $logPayload["token"] =
+                        $len <= 12
+                            ? str_repeat("*", $len)
+                            : substr($token, 0, 6) . "…" . substr($token, -6);
+                }
+            }
+
+            echo "[WebSocket Server] ← Parsed message from {$connection->connectionId}: " .
+                json_encode($logPayload, JSON_UNESCAPED_SLASHES) .
+                "\n";
+        }
 
         if (!is_array($payload)) {
             echo "[WebSocket Server] ⚠ Invalid JSON received from {$connection->connectionId}\n";
