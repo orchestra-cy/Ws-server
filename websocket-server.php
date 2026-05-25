@@ -16,32 +16,23 @@ $ws_worker->connectionCount = 0;
 $publicKeyPath = dirname(__DIR__) . "/config/jwt/public.pem";
 $algorithm = "RS256";
 
-// Prefer env var (Railway), fallback to file
-$envPublicKey = getenv("JWT_PUBLIC_KEY");
-if ($envPublicKey) {
-    // Normalize newlines if stored with literal \n
-    $publicKey = str_replace(["\\n", "\r\n", "\r"], "\n", $envPublicKey);
-    $fingerprint = substr(hash("sha256", $publicKey), 0, 12);
-    echo "[WebSocket Server] JWT public key loaded from env (sha256: {$fingerprint})\n";
-} else {
-    // Validate public key exists
-    if (!file_exists($publicKeyPath)) {
-        die("CRITICAL ERROR: JWT public key not found at: {$publicKeyPath}\n");
-    }
-
-    $publicKey = file_get_contents($publicKeyPath);
-    if (!$publicKey) {
-        die("CRITICAL ERROR: Could not read JWT public key\n");
-    }
-    $fingerprint = substr(hash("sha256", $publicKey), 0, 12);
-    echo "[WebSocket Server] JWT public key loaded from file (sha256: {$fingerprint})\n";
+// Validate public key exists (This is dynamically created by start-websockets.sh on Railway)
+if (!file_exists($publicKeyPath)) {
+    die("CRITICAL ERROR: JWT public key not found at: {$publicKeyPath}\n");
 }
 
+$publicKey = file_get_contents($publicKeyPath);
+if (!$publicKey) {
+    die("CRITICAL ERROR: Could not read JWT public key\n");
+}
+
+$fingerprint = substr(hash("sha256", $publicKey), 0, 12);
 $channelHost = getenv("CHANNEL_HOST") ?: "127.0.0.1";
 $channelPort = (int) (getenv("CHANNEL_PORT") ?: 2206);
 
 echo "[WebSocket Server] Starting on ws://0.0.0.0:8086\n";
 echo "[WebSocket Server] JWT validation enabled with RS256\n";
+echo "[WebSocket Server] JWT public key loaded (sha256: {$fingerprint})\n";
 
 $ws_worker->onWorkerStart = function () use (
     &$ws_worker,
